@@ -1,0 +1,459 @@
+---
+title: "EBOV empirical sampling proportions"
+author: "Louis du Plessis"
+date: \today
+fontsize: 10pt
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    keep_tex: false
+    fig_crop: false
+---
+
+# Summary
+
+Extract the weekly and monthly empirical sampling proportions for the datasets extracted in `extract_datasets.rmd` using surveillance data from the epidemic.
+The empirical sampling proportion for a time period is defined as the number of sequences generated divided by the number of cases reported.
+
+
+```{r rsetup, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.path="figs/", fig.width=8, fig.height=4}
+
+    rm(list = ls())
+    library(gplots)
+    library(bdskytools)
+    #library(knitr)
+    
+    source("../scripts/PlotUtils.R")
+
+  
+    survpath  <- "../data/cases/"
+    seqpath   <- "../results/datasets/"
+    
+    outputpath <- "../results/datasets/proportions/"    
+    dir.create(outputpath, recursive=TRUE, showWarnings=FALSE)
+
+    
+    dateorigin <- "1970-01-01"
+
+    parseMonth <- function(d) {
+      return (format.Date(as.Date(d), "%Y-%m-01"))
+    }
+    
+    sumMonths <- function(cases) {
+      
+      month <- parseMonth(rownames(cases)[1])
+      monthcases <- c()
+      monthsums  <- c()
+      monthdates <- c(month)
+      for (i in 1:nrow(cases)) {
+          m <- parseMonth(rownames(cases)[i])
+          if (m != month) {
+              monthsums <- rbind(monthsums, colSums(monthcases))
+              month     <- m
+              monthdates <- c(monthdates, month)
+              monthcases <- c(cases[i,])
+          } else {
+              monthcases <- rbind(monthcases, cases[i,])
+          }
+      }
+      monthsums <- rbind(monthsums, colSums(monthcases))
+      rownames(monthsums) <- monthdates
+      
+      monthsums <- data.frame(monthsums)
+      monthsums$patientSum   <- cumsum(monthsums$patient)
+      monthsums$situationSum <- cumsum(monthsums$situation)
+      monthsums$combinedSum  <- cumsum(monthsums$combined)
+      
+      return(monthsums)
+      
+    }
+    
+    
+    getWeeklyProportions <- function(cases, sequences, sanitise=TRUE) {
+      
+      seq_hist   <- hist(as.Date(sequences$date), breaks='weeks', start.on.monday=FALSE, plot=FALSE)
+      hist_dates <- as.Date(seq_hist$breaks, origin=dateorigin)
+      
+      start <- which(rownames(cases) == hist_dates[1])
+      end   <- which(rownames(cases) == hist_dates[length(hist_dates)-1])
+      
+      proportions <- seq_hist$counts/cases[start:end,c("patient","situation","combined")]
+      proportions <- cbind(getYearDate(rownames(proportions)), proportions)
+      colnames(proportions)[1] <- "yeardate"
+      
+      if (sanitise) {
+          proportions$patient[which(proportions$patient > 1)] <- 1
+          proportions$situation[which(proportions$situation > 1)] <- 1
+          proportions$combined[which(proportions$combined > 1)] <- 1
+          
+          proportions$patient[which(is.nan(proportions$patient))] <- 0
+          proportions$situation[which(is.nan(proportions$situation))] <- 0
+          proportions$combined[which(is.nan(proportions$combined))] <- 0
+      }
+          
+      return(proportions)
+    }
+    
+    getMonthlyProportions <- function(cases, sequences, sanitise=TRUE) {
+      
+      seq_hist   <- hist(as.Date(sequences$date), breaks='months', right=FALSE, plot=FALSE)
+      hist_dates <- as.Date(seq_hist$breaks, origin=dateorigin)
+      
+      start <- which(rownames(cases) == hist_dates[1])
+      end   <- which(rownames(cases) == hist_dates[length(hist_dates)-1])
+      
+      proportions <- seq_hist$counts/cases[start:end,c("patient","situation","combined")]
+      proportions <- cbind(getYearDate(rownames(proportions)), proportions)
+      colnames(proportions)[1] <- "yeardate"
+      
+      if (sanitise) {
+        proportions$patient[which(proportions$patient > 1)] <- 1
+        proportions$situation[which(proportions$situation > 1)] <- 1
+        proportions$combined[which(proportions$combined > 1)] <- 1
+        
+        proportions$patient[which(is.nan(proportions$patient))] <- 0
+        proportions$situation[which(is.nan(proportions$situation))] <- 0
+        proportions$combined[which(is.nan(proportions$combined))] <- 0
+      }
+      
+      return(proportions)
+    }
+    
+    # Assume cases are in order
+    sumBins <- function(cases, breaks) {
+      
+      daterows <- getYearDate(rownames(cases))
+      maxrow   <- which.max(daterows >= breaks[length(breaks)])-1
+      
+      cases <- as.matrix(cases)
+      
+      binnedcases <- matrix(0, ncol=ncol(cases), nrow=length(breaks))
+      bin <- 1
+      for (i in 1:maxrow) {
+           date <- getYearDate(rownames(cases)[i])
+           if (date >= breaks[bin]) {
+              bin <- bin + 1
+           }
+           
+           binnedcases[bin,] <- binnedcases[bin,] + cases[i,]
+      }
+      
+      binnedcases <- data.frame(binnedcases)
+      colnames(binnedcases) <- colnames(cases)
+      rownames(binnedcases) <- getDayDate(c(min(daterows), breaks[1:(length(breaks)-1)]))
+      binnedcases$patientSum   <- cumsum(binnedcases$patient)
+      binnedcases$situationSum <- cumsum(binnedcases$situation)
+      binnedcases$combinedSum  <- cumsum(binnedcases$combined)
+      
+      return(binnedcases)
+    }
+      
+    
+    getBinnedProportions <- function(cases, sequences, breaks, sanitise=TRUE) {
+      
+      # hist_dates <- c(as.Date("0000-01-01"), getDayDate(breaks))
+      seq_hist   <- hist(as.Date(sequences$date), breaks=getDayDate(breaks), right=FALSE, plot=FALSE)
+
+      proportions <- seq_hist$counts/cases[2:nrow(cases),c("patient","situation","combined")]
+      proportions <- cbind(getYearDate(rownames(proportions)), proportions)
+      #proportions <- cbind(proportions, cases$combined)
+      #proportions <- cbind(proportions, seq_hist$count )
+      colnames(proportions)[1] <- "yeardate"
+      
+      if (sanitise) {
+          proportions$patient[which(proportions$patient > 1)] <- 1
+          proportions$situation[which(proportions$situation > 1)] <- 1
+          proportions$combined[which(proportions$combined > 1)] <- 1
+          
+          proportions$patient[which(is.nan(proportions$patient))] <- 0
+          proportions$situation[which(is.nan(proportions$situation))] <- 0
+          proportions$combined[which(is.nan(proportions$combined))] <- 0
+      }
+          
+      return(proportions)
+    }
+    
+    plotCasesAndProportion <- function(dataset, proportions, breaks='weeks', label="Weekly cases", plotcounts=FALSE, col=pal.dark(cblue)) {
+      
+        par(mar=c(5,4,4,4)+0.1)
+    
+        caseslist <- c()
+        i <- 1
+        for (i in 1:nrow(dataset)) {
+            caseslist <- c(caseslist, rep(rownames(dataset)[i], dataset$combined[i]))
+            i <- i + 1
+        }
+        caseslist <- as.Date(caseslist)
+        
+        dates <- as.Date(hist(range(as.Date(rownames(proportions))), breaks=breaks, plot=FALSE)$breaks, origin=dateorigin)
+        
+        
+        plotSamplingHist(caseslist, ylab=label, xlab="", plotcounts=plotcounts, breaks=breaks, col=col, daterange=range(as.Date(rownames(proportions))))
+        
+        # May be a little buggy...
+        par(new=TRUE)
+        dates <- as.Date(hist(range(as.Date(rownames(proportions))), breaks=breaks, plot=FALSE)$breaks, origin=dateorigin)
+        plot(dates, c(proportions$combined, proportions$combined[nrow(proportions)]), type='s', 
+             col=pal.dark(cred), lwd=2, lty=2,
+             ylim=c(0,1), xlim=range(dates), 
+             xaxs='i',yaxs='i', axes=FALSE, xlab='', ylab='')
+        axis(4, las=1, cex.axis=0.8)
+        mtext("Sampling proportion", side=4, line=2)
+      
+    }
+    
+```
+
+---    
+    
+\clearpage
+
+# Datasets
+
+## Complete dataset 
+
+```{r all-cases, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    sle_cases <- read.table(paste0(survpath,"sierraleone_cases.csv"), header=TRUE)
+    gin_cases <- read.table(paste0(survpath,"guinea_cases.csv"), header=TRUE)
+    lbr_cases <- read.table(paste0(survpath,"liberia_cases.csv"), header=TRUE)
+    all_cases <- sle_cases + gin_cases + lbr_cases
+    
+    all_sequences    <- read.csv(paste0(seqpath,"complete.csv"))
+    all_weekly <- getWeeklyProportions(all_cases, all_sequences)
+    write.csv(t(all_weekly), paste0(outputpath,"all-weekly.csv"), quote=FALSE)
+    
+    all_cases_monthly <- sumMonths(all_cases)
+    all_monthly       <- getMonthlyProportions(all_cases_monthly, all_sequences)
+    write.csv(t(all_monthly), paste0(outputpath,"all-monthly.csv"), quote=FALSE)
+
+    daterange  <- range(getYearDate(all_sequences$date))
+    datebreaks <- seq(daterange[1], daterange[2], length.out=10)
+    all_cases_10bins <- sumBins(all_cases, breaks=datebreaks)
+    all_10bins       <- getBinnedProportions(all_cases_10bins, all_sequences, breaks=datebreaks)
+    write.csv(t(all_10bins), paste0(outputpath,"all-10bins.csv"), quote=FALSE)
+    
+    plotCasesAndProportion(all_cases, all_weekly,  breaks='weeks', label="Weekly cases",  plotcounts=FALSE, col=pal.dark(cblue))
+    plotCasesAndProportion(all_cases, all_monthly, breaks='months',label="Monthly cases", plotcounts=FALSE, col=pal.dark(corange))
+    
+```
+
+
+
+\clearpage
+
+## Southeast Sierra Leone
+
+```{r region-sle-southeast-cases, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    sle_southeast_cases     <- read.table(paste0(survpath,"sierraleone_southeast_cases.csv"), header=TRUE)
+    sle_southeast_sequences <- read.csv(paste0(seqpath,"region-sle-southeast.csv"))
+    sle_southeast_weekly    <- getWeeklyProportions(sle_southeast_cases, sle_southeast_sequences)
+    write.csv(t(sle_southeast_weekly), paste0(outputpath,"sle-southeast-weekly.csv"), quote=FALSE)
+    
+    sle_southeast_cases_monthly <- sumMonths(sle_southeast_cases)
+    sle_southeast_monthly       <- getMonthlyProportions(sle_southeast_cases_monthly, sle_southeast_sequences)
+    write.csv(t(sle_southeast_monthly), paste0(outputpath,"sle-southeast-monthly.csv"), quote=FALSE)
+        
+    daterange  <- range(getYearDate(sle_southeast_sequences$date))
+    datebreaks <- seq(daterange[1], daterange[2], length.out=10)
+    sle_southeast_cases_10bins <- sumBins(sle_southeast_cases, breaks=datebreaks)
+    sle_southeast_10bins       <- getBinnedProportions(sle_southeast_cases_10bins, sle_southeast_sequences, breaks=datebreaks)
+    write.csv(t(sle_southeast_10bins), paste0(outputpath,"sle-southeast-10bins.csv"), quote=FALSE)
+    
+    
+    plotCasesAndProportion(sle_southeast_cases, sle_southeast_weekly,  breaks='weeks', label="Weekly cases",  plotcounts=FALSE, col=pal.dark(cblue))
+    plotCasesAndProportion(sle_southeast_cases, sle_southeast_monthly, breaks='months',label="Monthly cases", plotcounts=FALSE, col=pal.dark(corange))
+    
+
+
+```
+
+
+## Western Sierra Leone
+
+```{r region-sle-west-cases, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    sle_west_cases     <- read.table(paste0(survpath,"sierraleone_western_cases.csv"), header=TRUE)
+    sle_west_sequences <- read.csv(paste0(seqpath,"region-sle-west.csv"))
+    sle_west_weekly    <- getWeeklyProportions(sle_west_cases, sle_west_sequences)
+    write.csv(t(sle_west_weekly), paste0(outputpath,"sle-west-weekly.csv"), quote=FALSE)
+    
+    sle_west_cases_monthly <- sumMonths(sle_west_cases)
+    sle_west_monthly       <- getMonthlyProportions(sle_west_cases_monthly, sle_west_sequences)
+    write.csv(t(sle_west_monthly), paste0(outputpath,"sle-west-monthly.csv"), quote=FALSE)
+    
+    daterange  <- range(getYearDate(sle_west_sequences$date))
+    datebreaks <- seq(daterange[1], daterange[2], length.out=10)
+    sle_west_cases_10bins <- sumBins(sle_west_cases, breaks=datebreaks)
+    sle_west_10bins       <- getBinnedProportions(sle_west_cases_10bins, sle_west_sequences, breaks=datebreaks)
+    write.csv(t(sle_west_10bins), paste0(outputpath,"sle-west-10bins.csv"), quote=FALSE)
+    
+    plotCasesAndProportion(sle_west_cases, sle_west_weekly,  breaks='weeks', label="Weekly cases",  plotcounts=FALSE, col=pal.dark(cblue))
+    plotCasesAndProportion(sle_west_cases, sle_west_monthly, breaks='months',label="Monthly cases", plotcounts=FALSE, col=pal.dark(corange))
+    
+```
+
+
+\clearpage
+
+
+## Eastern Sierra Leone
+
+```{r region-sle-east-cases, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    sle_east_cases     <- read.table(paste0(survpath,"sierraleone_eastern_cases.csv"), header=TRUE)
+    sle_east_sequences <- read.csv(paste0(seqpath,"region-sle-east.csv"))
+    sle_east_weekly    <- getWeeklyProportions(sle_east_cases, sle_east_sequences)
+    write.csv(t(sle_east_weekly), paste0(outputpath,"sle-east-weekly.csv"), quote=FALSE)
+    
+    sle_east_cases_monthly <- sumMonths(sle_east_cases)
+    sle_east_monthly       <- getMonthlyProportions(sle_east_cases_monthly, sle_east_sequences)
+    write.csv(t(sle_east_monthly), paste0(outputpath,"sle-east-monthly.csv"), quote=FALSE)
+    
+    daterange  <- range(getYearDate(sle_east_sequences$date))
+    datebreaks <- seq(daterange[1], daterange[2], length.out=10)
+    sle_east_cases_10bins <- sumBins(sle_east_cases, breaks=datebreaks)
+    sle_east_10bins       <- getBinnedProportions(sle_east_cases_10bins, sle_east_sequences, breaks=datebreaks)
+    write.csv(t(sle_east_10bins), paste0(outputpath,"sle-east-10bins.csv"), quote=FALSE)
+    
+    plotCasesAndProportion(sle_east_cases, sle_east_weekly,  breaks='weeks', label="Weekly cases",  plotcounts=FALSE, col=pal.dark(cblue))
+    plotCasesAndProportion(sle_east_cases, sle_east_monthly, breaks='months',label="Monthly cases", plotcounts=FALSE, col=pal.dark(corange))
+    
+    
+```
+
+
+\clearpage
+
+## Liberia
+
+```{r country-lbr-cases, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    lbr_cases     <- read.table(paste0(survpath,"liberia_cases.csv"), header=TRUE)
+    lbr_sequences <- read.csv(paste0(seqpath,"country-lbr.csv"))
+    lbr_weekly    <- getWeeklyProportions(lbr_cases, lbr_sequences)
+    write.csv(t(lbr_weekly), paste0(outputpath,"lbr-weekly.csv"), quote=FALSE)
+    
+    lbr_cases_monthly <- sumMonths(lbr_cases)
+    lbr_monthly       <- getMonthlyProportions(lbr_cases_monthly, lbr_sequences)
+    write.csv(t(lbr_monthly), paste0(outputpath,"lbr-monthly.csv"), quote=FALSE)
+    
+    daterange  <- range(getYearDate(lbr_sequences$date))
+    datebreaks <- seq(daterange[1], daterange[2], length.out=10)
+    lbr_cases_10bins <- sumBins(lbr_cases, breaks=datebreaks)
+    lbr_10bins       <- getBinnedProportions(lbr_cases_10bins, lbr_sequences, breaks=datebreaks)
+    write.csv(t(lbr_10bins), paste0(outputpath,"lbr-10bins.csv"), quote=FALSE)
+    
+    plotCasesAndProportion(lbr_cases, lbr_weekly,  breaks='weeks', label="Weekly cases",  plotcounts=FALSE, col=pal.dark(cblue))
+    plotCasesAndProportion(lbr_cases, lbr_monthly, breaks='months',label="Monthly cases", plotcounts=FALSE, col=pal.dark(corange))
+    
+    
+```
+
+
+\clearpage
+
+
+## Early outbreak
+
+All sequences until 4 August (WHO declares public health emergency). 
+
+```{r special-early, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    sle_cases <- read.table(paste0(survpath,"sierraleone_cases.csv"), header=TRUE)
+    gin_cases <- read.table(paste0(survpath,"guinea_cases.csv"), header=TRUE)
+    lbr_cases <- read.table(paste0(survpath,"liberia_cases.csv"), header=TRUE)
+    all_cases <- sle_cases + gin_cases + lbr_cases
+    
+    early_sequences    <- read.csv(paste0(seqpath,"special-early.csv"))
+    early_weekly <- getWeeklyProportions(all_cases, early_sequences)
+    write.csv(t(early_weekly), paste0(outputpath,"special-early-weekly.csv"), quote=FALSE)
+    
+    all_cases_monthly <- sumMonths(all_cases)
+    early_monthly       <- getMonthlyProportions(all_cases_monthly, early_sequences)
+    write.csv(t(early_monthly), paste0(outputpath,"special-early-monthly.csv"), quote=FALSE)
+    
+    daterange  <- range(getYearDate(early_sequences$date))
+    datebreaks <- seq(daterange[1], daterange[2], length.out=10)
+    all_cases_10bins <- sumBins(all_cases, breaks=datebreaks)
+    early_10bins       <- getBinnedProportions(all_cases_10bins, early_sequences, breaks=datebreaks)
+    write.csv(t(early_10bins), paste0(outputpath,"special-early-10bins.csv"), quote=FALSE)
+
+    plotCasesAndProportion(all_cases, early_weekly,  breaks='weeks', label="Weekly cases",  plotcounts=FALSE, col=pal.dark(cblue))
+    plotCasesAndProportion(all_cases, early_monthly, breaks='months',label="Monthly cases", plotcounts=FALSE, col=pal.dark(corange))
+    
+```
+
+
+
+
+\clearpage
+
+
+## Subsampled complete outbreak
+
+Complete outbreak subsampled to approximately a quarter of sequences and roughly stratified by month.
+
+```{r special-suball, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    sle_cases <- read.table(paste0(survpath,"sierraleone_cases.csv"), header=TRUE)
+    gin_cases <- read.table(paste0(survpath,"guinea_cases.csv"), header=TRUE)
+    lbr_cases <- read.table(paste0(survpath,"liberia_cases.csv"), header=TRUE)
+    all_cases <- sle_cases + gin_cases + lbr_cases
+    
+    sub_sequences    <- read.csv(paste0(seqpath,"special-suball.csv"))
+    sub_weekly <- getWeeklyProportions(all_cases, sub_sequences)
+    write.csv(t(sub_weekly), paste0(outputpath,"special-suball-weekly.csv"), quote=FALSE)
+    
+    all_cases_monthly <- sumMonths(all_cases)
+    sub_monthly       <- getMonthlyProportions(all_cases_monthly, sub_sequences)
+    write.csv(t(sub_monthly), paste0(outputpath,"special-suball-monthly.csv"), quote=FALSE)
+    
+    daterange  <- range(getYearDate(sub_sequences$date))
+    datebreaks <- seq(daterange[1], daterange[2], length.out=10)
+    all_cases_10bins <- sumBins(all_cases, breaks=datebreaks)
+    sub_10bins       <- getBinnedProportions(all_cases_10bins, sub_sequences, breaks=datebreaks)
+    write.csv(t(sub_10bins), paste0(outputpath,"special-suball-10bins.csv"), quote=FALSE)
+
+    plotCasesAndProportion(all_cases, sub_weekly,  breaks='weeks', label="Weekly cases",  plotcounts=FALSE, col=pal.dark(cblue))
+    plotCasesAndProportion(all_cases, sub_monthly, breaks='months',label="Monthly cases", plotcounts=FALSE, col=pal.dark(corange))
+    
+```
+
+
+\clearpage
+
+## Subsampled complete outbreak big
+
+Complete outbreak subsampled to approximately half of all sequences and roughly stratified by month.
+
+```{r special-subbig, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    sle_cases <- read.table(paste0(survpath,"sierraleone_cases.csv"), header=TRUE)
+    gin_cases <- read.table(paste0(survpath,"guinea_cases.csv"), header=TRUE)
+    lbr_cases <- read.table(paste0(survpath,"liberia_cases.csv"), header=TRUE)
+    all_cases <- sle_cases + gin_cases + lbr_cases
+    
+    sub_sequences    <- read.csv(paste0(seqpath,"special-subbig.csv"))
+    sub_weekly <- getWeeklyProportions(all_cases, sub_sequences)
+    write.csv(t(sub_weekly), paste0(outputpath,"special-subbig-weekly.csv"), quote=FALSE)
+    
+    all_cases_monthly <- sumMonths(all_cases)
+    sub_monthly       <- getMonthlyProportions(all_cases_monthly, sub_sequences)
+    write.csv(t(sub_monthly), paste0(outputpath,"special-subbig-monthly.csv"), quote=FALSE)
+
+    daterange  <- range(getYearDate(sub_sequences$date))
+    datebreaks <- seq(daterange[1], daterange[2], length.out=10)
+    all_cases_10bins <- sumBins(all_cases, breaks=datebreaks)
+    sub_10bins       <- getBinnedProportions(all_cases_10bins, sub_sequences, breaks=datebreaks)
+    write.csv(t(sub_10bins), paste0(outputpath,"special-subbig-10bins.csv"), quote=FALSE)
+    
+    plotCasesAndProportion(all_cases, sub_weekly,  breaks='weeks', label="Weekly cases",  plotcounts=FALSE, col=pal.dark(cblue))
+    plotCasesAndProportion(all_cases, sub_monthly, breaks='months',label="Monthly cases", plotcounts=FALSE, col=pal.dark(corange))
+    
+```
+
+

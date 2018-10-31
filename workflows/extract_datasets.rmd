@@ -1,0 +1,400 @@
+---
+title: "EBOV sequence datasets"
+author: "Louis du Plessis"
+date: \today
+fontsize: 10pt
+output:
+  pdf_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    keep_tex: false
+    fig_crop: false
+---
+
+# Summary
+
+Get a few smaller subsets of the dataset on https://github.com/ebov/space-time.
+
+
+```{r rsetup, echo=FALSE, warning=FALSE, message=FALSE, results='hide', fig.path="figs/", fig.width=8, fig.height=4}
+
+    rm(list = ls())
+    library(gplots)
+    library(bdskytools)
+    library(knitr)
+    
+    source("../scripts/PlotUtils.R")
+
+    addStats <- function(stats, dataset, name="data") {
+      
+        stats$names     <- c(stats$names,     name)
+        stats$sequences <- c(stats$sequences, nrow(dataset))
+        stats$earliest  <- c(stats$earliest,  min(dataset$date))
+        stats$latest    <- c(stats$latest,    max(dataset$date))
+        stats$range     <- c(stats$range,     diff(range(dataset$date)))
+
+        return(stats)  
+    }
+    
+    
+    #' Quick function for downsampling to some fraction, approximately stratified 
+    #' by month, with a minimum monthly count cutoff
+    #' 
+    #' Returns the indices in the original vector to sample
+    downsampleStratifiedByMonth <- function(sampledates, frac, cutoff=5) {
+    
+      # Get monthly counts
+      monthlycounts <- hist(sampledates, breaks='months', freq=TRUE, plot = FALSE)
+      
+      # Get new monthly counts after downsampling
+      monthlysamples <- c()
+      for (m in monthlycounts$counts) {
+          count <- ceiling(frac*m)
+          if (count < cutoff) {
+              monthlysamples <- c(monthlysamples, m)
+          } else {
+              monthlysamples <- c(monthlysamples, count)
+          }
+      }
+      
+      
+      # Get indices for each bin in the histogram and subsample
+      # By default histogram cells are right closed, left open intervals
+      breakdates <- as.Date(monthlycounts$breaks, origin=dateorigin)
+      indices    <- c()
+      for (i in 1:(length(breakdates)-1)) {
+          samples <- which(sampledates > breakdates[i] & sampledates <= breakdates[i+1])
+          # print(paste(length(samples), monthlycounts$counts[i]))
+          indices <- c(indices, sample(samples, monthlysamples[i], replace=FALSE))
+      }
+      return(indices)
+      
+    }
+
+    
+    inputpath  <- "../data/sequence/Data/"
+    outputpath <- "../results/datasets/"
+    
+    # Preprocessing
+    seqdb <- read.csv(paste0(inputpath, "Makona_1610_metadata_2016-06-23.csv"), row.names = 1)
+    
+    # Column names to rename
+    renamemap <- list("final_label"  ="label",
+                      "prop_ambig."  ="proportion_ambiguous",
+                      "imputed_date."="imputed_date")
+    
+    # Rename columns, add NAs and remove commas
+    cols <- names(seqdb)
+    for (i in 1:length(cols)) {
+      print(cols[i])
+      seqdb[[cols[i]]][which(seqdb[cols[i]] == "")]  <- NA
+      seqdb[[cols[i]]][which(seqdb[cols[i]] == "?")] <- NA
+      
+      collevels <- levels(seqdb[[cols[i]]])
+      commas <- grep(",", collevels)
+      for (c in commas) {
+          collevels[c] <- gsub(",","",collevels[c])
+      }
+      levels(seqdb[[cols[i]]]) <- collevels
+      
+      if (cols[i] %in% names(renamemap))
+          cols[i] <- renamemap[[cols[i]]]
+    }
+    names(seqdb) <- cols
+    seqdb <- droplevels(seqdb)
+    
+    # Convert to dates
+    seqdb$date            <- as.Date(seqdb$date, format="%d/%m/%Y")
+    seqdb$imputed_date    <- as.Date(seqdb$imputed_date, format="%d/%m/%Y")
+    seqdb$collection_date <- as.Date(seqdb$collection_date, format="%d/%m/%Y")
+    
+    # Save file
+    write.csv(seqdb, paste0(outputpath,"complete.csv"), quote=FALSE, row.names=FALSE)
+    
+    # Track statistics of datasets
+    stats <- list(names=c(), sequences=c(), earliest=c(), latest=c(), range=c())
+    
+    # Load maps
+    SLE_adm2 <- readRDS("../data/maps/SLE_adm2.rds")
+    GIN_adm2 <- readRDS( "../data/maps/GIN_adm2.rds")
+    LBR_adm1 <- readRDS( "../data/maps/LBR_adm1.rds")
+    LBR_adm1$NAME_2 <- LBR_adm1$NAME_1
+    
+    # Ordered countries and locations
+    countries <- as.factor(c(rep("LBR",13), rep("SLE",15), rep("GIN",19)))
+    locations <- c("Bomi","Bong","Gbarpolu","GrandBassa","GrandCapeMount","GrandKru","Lofa","Margibi","Montserrado","Nimba","RiverCess","RiverGee","Sinoe",
+                   "Kailahun","Kenema","Kono","Bo","Bonthe","Moyamba","Pujehun","Bombali","Koinadugu","Tonkolili","Kambia","PortLoko","WesternArea","WesternRural","WesternUrban",
+                   "Conakry","Boke","Fria","Coyah","Dubreka","Forecariah","Kindia","Dalaba",
+                   "Faranah","Kissidougou","Kankan","Kerouane","Kouroussa","Siguiri","Beyla","Gueckedou","Lola","Macenta","Nzerekore")
+    #regions   <- as.factor(c(rep("LBR",13), rep("East SLE",3),  rep("South SLE",4), rep("North SLE",5), rep("West SLE",3),rep("West GIN",8),rep("East GIN",11)))
+    
+```
+
+---    
+    
+\clearpage
+
+# Datasets
+
+## Complete dataset 
+
+
+```{r complete-date, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    # Reload 
+    #seqdb <- read.csv(paste0(outputpath,"EBOV_ALL.csv"), row.names = 1)
+    plotSamplingHist(seqdb$date, ymax=80, ylab="", xlab=paste0("Complete dataset (weekly counts)\n(",nrow(seqdb)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8)
+    plotSamplingHist(seqdb$date, ymax=250, ylab="", xlab=paste0("Complete dataset (monthly counts)\n(",nrow(seqdb)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8, breaks='months', col=pal.dark(cgreen))
+    stats <- addStats(stats, seqdb, "complete")
+    
+```
+
+```{r complete-geo, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=3.5, fig.height=3}
+
+    plotMapGradient(getDistrictCounts(seqdb), GIN_adm2, numlabels=5, lwd=0.5, col=pal.dark(cgreen))
+    plotMapGradient(getDistrictCounts(seqdb), SLE_adm2, numlabels=5, lwd=0.5, col=pal.dark(cblue))
+    plotMapGradient(getDistrictCounts(seqdb), LBR_adm1, numlabels=5, lwd=0.5, col=pal.dark(corange))
+    
+    par(mar=c(2,2,2,2)+0.1)
+    counts <- table(seqdb$country)
+    pie(counts, paste0(names(counts), " (", counts,")"), border="white", col=pal.dark(c(cgreen, corange, cblue)), cex=0.8)
+
+```
+
+---
+
+\clearpage
+
+## Southeast Sierra Leone
+
+```{r region-sle-southeast-date, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+    
+    locs <- c("Kailahun", "Kenema", "Kono", "Bo", "Bonthe", "Moyamba", "Pujehun")
+    SESLE <- droplevels(seqdb[which(seqdb$location %in% locs),])
+    write.csv(SESLE, paste0(outputpath,"region-sle-southeast.csv"), quote=FALSE, row.names=FALSE)
+    
+    plotSamplingHist(SESLE$date, daterange=range(seqdb$date), ymax=50, ylab="", xlab=paste0("Southeast Sierra Leone\n(",nrow(SESLE)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8)
+    stats <- addStats(stats, SESLE, "region-sle-southeast")
+```
+
+```{r region-sle-southeast-geo, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=3.5, fig.height=3}
+
+    par(mar=c(5,4,0,0)+0.1)
+    plotProportions(table(SESLE$location), labels=locations[which(countries == "SLE")], prop=FALSE, cex.axis=0.7, cex.names=0.7, cex.counts=0.6, col=pal.dark(cblue))
+    plotMapGradient(getDistrictCounts(SESLE), SLE_adm2, numlabels=5, lwd=0.5, col=pal.dark(cblue))
+
+```
+
+
+## Western Sierra Leone
+
+```{r region-sle-west-date, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+    
+    locs <- c("WesternArea", "WesternRural", "WesternUrban")
+    WSLE <- droplevels(seqdb[which(seqdb$location %in% locs),])
+    write.csv(WSLE, paste0(outputpath,"region-sle-west.csv"), quote=FALSE, row.names=FALSE)
+    
+    plotSamplingHist(WSLE$date, daterange=range(seqdb$date), ymax=50, ylab="", xlab=paste0("Western Sierra Leone\n(",nrow(WSLE)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8)
+    stats <- addStats(stats, WSLE, "region-sle-west")
+```
+
+```{r region-sle-west-geo, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=3.5, fig.height=3}
+
+    par(mar=c(5,4,0,0)+0.1)
+    plotProportions(table(WSLE$location), labels=locations[which(countries == "SLE")], prop=FALSE, cex.axis=0.7, cex.names=0.7, cex.counts=0.6, col=pal.dark(cblue))
+    plotMapGradient(getDistrictCounts(WSLE), SLE_adm2, numlabels=5, lwd=0.5, col=pal.dark(cblue))
+
+```
+
+
+\clearpage
+
+
+## Eastern Sierra Leone
+
+```{r region-sle-east-date, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+    
+    locs <- c("Kailahun", "Kenema", "Kono")
+    ESLE <- droplevels(seqdb[which(seqdb$location %in% locs),])
+    write.csv(ESLE, paste0(outputpath,"region-sle-east.csv"), quote=FALSE, row.names=FALSE)
+    
+    plotSamplingHist(ESLE$date, daterange=range(seqdb$date), ymax=50, ylab="", xlab=paste0("Eastern Sierra Leone\n(",nrow(ESLE)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8)
+    stats <- addStats(stats, ESLE, "region-sle-east")
+```
+
+
+```{r region-sle-east-geo, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=3.5, fig.height=3}
+
+    par(mar=c(5,4,0,0)+0.1)
+    plotProportions(table(ESLE$location), labels=locations[which(countries == "SLE")], prop=FALSE, cex.axis=0.7, cex.names=0.7, cex.counts=0.6, col=pal.dark(cblue))
+    plotMapGradient(getDistrictCounts(ESLE), SLE_adm2, numlabels=5, lwd=0.5, col=pal.dark(cblue))
+
+```
+
+\clearpage
+
+## Liberia
+
+```{r country-lbr-date, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+    
+    LBR <- droplevels(seqdb[which(seqdb$country == "LBR"),])
+    write.csv(LBR, paste0(outputpath,"country-lbr.csv"), quote=FALSE, row.names=FALSE)
+    
+    plotSamplingHist(LBR$date, daterange=range(seqdb$date), ymax=80, ylab="", xlab=paste0("Liberia\n(",nrow(LBR)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8, col=pal.dark(cblue))
+    stats <- addStats(stats, LBR, "country-lbr")
+
+```
+
+```{r country-lbr-geo, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=3.5, fig.height=3}
+
+    par(mar=c(5,4,0,0)+0.1)
+    plotProportions(table(LBR$location), labels=levels(LBR$location), prop=FALSE, cex.axis=0.7, cex.names=0.7, cex.counts=0.6, col=pal.dark(cblue))
+    plotMapGradient(getDistrictCounts(LBR), LBR_adm1, numlabels=5, lwd=0.5, col=pal.dark(cblue))
+
+```
+
+
+\clearpage
+
+
+## Early outbreak
+
+All sequences until 8 August (WHO declares public health emergency). 
+
+```{r special-early-date, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    early  <- droplevels(seqdb[which(seqdb$date < as.Date("2014-08-08")),])
+    write.csv(early, paste0(outputpath,"special-early.csv"), quote=FALSE, row.names=FALSE)
+    
+    plotSamplingHist(early$date, daterange=range(seqdb$date), ymax=50, ylab="", xlab=paste0("Early outbreak\n(",nrow(early)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8, col=pal.dark(cblue))
+    stats <- addStats(stats, early, "special-early")
+
+    plotSamplingHist(early$date, daterange=range(early$date), ymax=50, ylab="", xlab=paste0("Early outbreak\n(",nrow(early)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8, col=pal.dark(cblue))
+
+```
+
+\clearpage
+
+```{r special-early-geo, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=3.5, fig.height=3}
+    plotMapGradient(getDistrictCounts(early[which(early$country == "GIN"),]), GIN_adm2, numlabels=5, lwd=0.5, col=pal.dark(cgreen))
+    plotMapGradient(getDistrictCounts(early[which(early$country == "SLE"),]), SLE_adm2, numlabels=5, lwd=0.5, col=pal.dark(cblue))
+    plotMapGradient(getDistrictCounts(early[which(early$country == "LBR"),]), LBR_adm1, numlabels=5, lwd=0.5, col=pal.dark(corange))
+    
+    par(mar=c(2,2,2,2)+0.1)
+    counts <- table(early$country)
+    pie(counts, paste0(names(counts), " (", counts,")"), border="white", col=pal.dark(c(cgreen, corange, cblue)), cex=0.8)
+
+
+    par(mar=c(5,4,0,0)+0.1)
+    plotProportions(table(early$location), labels=levels(early$location), prop=FALSE, cex.axis=0.7, cex.names=0.7, cex.counts=0.6, col=pal.dark(cblue))
+
+```
+
+
+\clearpage
+
+
+## Subsampled complete outbreak
+
+Complete outbreak subsampled to approximately a quarter of sequences and roughly stratified by month.
+
+```{r special-suball-date, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    set.seed(25)
+
+    suball  <- seqdb[downsampleStratifiedByMonth(seqdb$date, 0.2),]
+    write.csv(suball, paste0(outputpath,"special-suball.csv"), quote=FALSE, row.names=FALSE)
+    
+    plotSamplingHist(suball$date, daterange=range(seqdb$date), ymax=50, ylab="", xlab=paste0("Subsampled complete outbreak\n(",nrow(suball)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8, col=pal.dark(cblue))
+    plotSamplingHist(suball$date, ymax=50, ylab="", xlab=paste0("Subsampled complete outbreak\n(",nrow(suball)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8, breaks='months', col=pal.dark(cgreen))
+
+    stats <- addStats(stats, suball, "special-suball")
+
+
+```
+
+\clearpage
+
+```{r special-suball-geo, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=3.5, fig.height=3}
+    plotMapGradient(getDistrictCounts(suball[which(suball$country == "GIN"),]), GIN_adm2, numlabels=5, lwd=0.5, col=pal.dark(cgreen))
+    plotMapGradient(getDistrictCounts(suball[which(suball$country == "SLE"),]), SLE_adm2, numlabels=5, lwd=0.5, col=pal.dark(cblue))
+    plotMapGradient(getDistrictCounts(suball[which(suball$country == "LBR"),]), LBR_adm1, numlabels=5, lwd=0.5, col=pal.dark(corange))
+    
+    par(mar=c(2,2,2,2)+0.1)
+    counts <- table(suball$country)
+    pie(counts, paste0(names(counts), " (", counts,")"), border="white", col=pal.dark(c(cgreen, corange, cblue)), cex=0.8)
+
+```
+
+\clearpage
+
+## Subsampled complete outbreak big
+
+Complete outbreak subsampled to approximately half of all sequences and roughly stratified by month.
+
+```{r special-subbig-date, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=8, fig.height=4}
+
+    set.seed(25)
+
+    subbig  <- seqdb[downsampleStratifiedByMonth(seqdb$date, 0.5),]
+    write.csv(subbig, paste0(outputpath,"special-subbig.csv"), quote=FALSE, row.names=FALSE)
+    
+    plotSamplingHist(subbig$date, daterange=range(seqdb$date), ymax=50, ylab="", xlab=paste0("Subsampled complete outbreak\n(",nrow(subbig)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8, col=pal.dark(cblue))
+    plotSamplingHist(subbig$date, ymax=120, ylab="", xlab=paste0("Subsampled complete outbreak\n(",nrow(subbig)," sequences)"), cex.years=1, cex.months=0.7, cex.axis=0.8, breaks='months', col=pal.dark(cgreen))
+
+    stats <- addStats(stats, subbig, "special-subbig")
+
+
+```
+
+\clearpage
+
+```{r special-subbig-geo, echo=FALSE, warning=FALSE, results='hide', fig.path=paste0(outputpath,"figs/"), fig.width=3.5, fig.height=3}
+    plotMapGradient(getDistrictCounts(suball[which(subbig$country == "GIN"),]), GIN_adm2, numlabels=5, lwd=0.5, col=pal.dark(cgreen))
+    plotMapGradient(getDistrictCounts(suball[which(subbig$country == "SLE"),]), SLE_adm2, numlabels=5, lwd=0.5, col=pal.dark(cblue))
+    plotMapGradient(getDistrictCounts(suball[which(subbig$country == "LBR"),]), LBR_adm1, numlabels=5, lwd=0.5, col=pal.dark(corange))
+    
+    par(mar=c(2,2,2,2)+0.1)
+    counts <- table(subbig$country)
+    pie(counts, paste0(names(counts), " (", counts,")"), border="white", col=pal.dark(c(cgreen, corange, cblue)), cex=0.8)
+
+```
+
+---
+
+
+# Dataset statistics
+
+```{r echo=FALSE, results='asis'}
+
+    stats <- data.frame(stats)
+    stats$earliest <- as.Date(stats$earliest, origin=dateorigin)
+    stats$latest <- as.Date(stats$latest, origin=dateorigin)
+    
+    kable(stats,  caption="Dataset statistics")
+```
+
+
+# Select sequences from Fasta file
+
+```{bash, results='hide', eval=TRUE}
+    
+    # Load Conda environment
+    source /Users/user/anaconda3/envs/bio/bin/activate bio
+
+    # Extract sequences
+    for i in `ls ../results/datasets/*.csv` 
+    do 
+        # Full-length genomes
+        python ../scripts/selectsequences.py -i ${i} -a ../data/sequence/Data/Makona_1610_genomes_2016-06-23.fasta -o ../results/datasets/nflg/ -m -u
+        
+        # Coding sequences
+        python ../scripts/selectsequences.py -i ${i} -a ../results/datasets/Makona_1610_cds.trimmed.fas -o ../results/datasets/cds/ -m -u
+        
+        # Noncoding sequences
+        python ../scripts/selectsequences.py -i ${i} -a ../results/datasets/Makona_1610_ig.trimmed.fas -o ../results/datasets/ig/ -m -u
+    done
+    
+```
+
