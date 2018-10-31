@@ -1,5 +1,7 @@
 # BEAST v2.5 West Africa Ebola example
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.1476124.svg)](https://doi.org/10.5281/zenodo.1476124)
+
 Please contact Louis du Plessis (louis.duplessis@zoo.ox.ac.uk) for any questions.
 
 ## Summary
