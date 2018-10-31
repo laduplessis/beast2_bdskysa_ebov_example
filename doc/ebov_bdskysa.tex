@@ -1,0 +1,122 @@
+
+%\section*{bdsky results}
+\section{Tree models for unstructured populations}
+
+
+\begin{figure}[!ht]
+	\includegraphics{figures/{EBOV-SUBBIG.BDSKYSA.BMT.relaxedclock.R20.SM.combined2}.pdf}
+	\caption{Birth-death skyline (bdsky) analysis of the 2013--2016 West African Ebola virus disease epidemic.  
+\textbf{(a)} The maximum clade credibility tree of the 811 sequences used in the analysis. 
+\textbf{(b)} The median posterior estimate of the estimated effective reproductive number ($R_e$) over time is shown in orange, with the 95\% highest posterior density (HPD) interval in orange shading. The red dotted line indicates the epidemic threshold ($R_e = 1$). If $R_e$ is below this threshold the epidemic has reached a turning point and is no longer spreading. 
+The posterior distribution of the origin time of the epidemic ($t_0$) is shown in green. 
+The number of laboratory-confirmed cases per epiweek is shown in blue. Red arrows indicate weeks with fewer than 10 confirmed cases. The dotted line at A indicates the onset of symptoms in the suspected index case \citep{WHO2016NEJM}. The dotted lines at B and C indicate the dates at which the WHO declared an Ebola virus disease outbreak in Guinea and a Public Health Emergency of International Concern (PHEIC), respectively. The dotted line at D indicates the first time any of the three countries with intense transmission (Liberia) was declared Ebola free following 42 days without any new infections being reported (new cases were subsequently detected in Liberia in June 2015).
+\textbf{(c)} The median posterior estimate of the monthly sampling proportion is shown in purple, with the 95\% HPD interval in purple shading.
+The red dashed line indicates the number of sampled sequences in the dataset, divided by the number of laboratory-confirmed cases, for each month in the analysis. This serves as an empirical estimate of the true sampling proportion. 	
+The posterior distributions and medians (dashed lines) of the infected period and the mean clock rate (truncated at the 95\% HPD limits) are shown in panels \textbf{(d)} and \textbf{(e)}.}
+	\label{fig:ebov_bdsky}	
+\end{figure}
+
+\clearpage 
+
+\emph{Insert at the end of the paragraph ending on line 206 (bdsky)}
+
+% There are two common approaches for modelling the phylogenetic tree, or the genealogy, in phylogenetic inference. % Tanja: so far we only talked about phylo trees. do we need to talk about genealogies here? if so, shall we define what we mean with phylo tree vs genealogy.
+% The first assumes a classic  population dynamic model, namely the birth-death model \citep{Yule1924,kendall1949stochastic}, to model the growth of a tree. 
+% In a population dynamic birth-death model, through time, each individual gives rise to one additional offspring with rate $\lambda$ and dies with rate $\mu$. 
+% As we only analyse a fraction of individuals arising in this process, it is necessary to model the sampling process for tips of a birth-death tree. 
+% For a variety of simple partially-sampled birth-death trees, the distribution of branch lengths has been derived exactly\citep{StadlerJTB2010}.
+
+% Alternatively, a mathematical model for trees known as the coalescent \citep{kingman1982b,griffiths1994} can be adapted to account for changing effective population size through time.
+% One can interpret the parameters of the coalescent, namely the effective population size and its changes, as birth-death parameters \citep{volz2012complex} when making some coalescent approximations.
+% Partially-sampled birth-death models do not make the approximations that coalescent models do, but they depend on a model of the sampling process, and simple sampling models may not always be an adequate description of real data sets. It is an ongoing debate and topic of research to investigate the consequences of coalescent approximations and sampling model assumptions.
+
+% Coalescent approaches have been embedded within BEAST since its original release \citep{drummond2007beast}. Thus, we will not further discuss the basic coalescent approach here. In what follows, we will introduce the basic birth-death models which underwent major development in recent years. Then, we discuss the more sophisticated birth-death and coalescent approaches side by side.
+% % Tanja please check if you like my re-write - (I realized that you restructured the start based on erik's comments ; but then the flow for the rest was a bit weird. I hope it is fine again now.)
+
+
+% %A commonly used basis of population dynamic models giving rise to trees is the class of birth-death models \citep{Yule1924,kendall1949stochastic}. 
+% %Through time, each individual gives rise to one additional offspring with rate $\lambda$ and dies with rate $\mu$. 
+% %There are two common approaches for adapting this process to provide a genealogical prior for phylogenetic inference. 
+% %The first is to propose a sampling process for tips of a birth-death genealogy. 
+% %For a variety of simple partially-sampled birth-death genealogies, the distribution of branch lengths has been derived exactly\citep{StadlerJTB2010}.
+% %Alternatively, a mathematical model for genealogies known as the coalescent \citep{kingman1982b,griffiths1994} can be adapted to account for changing effective population size through time.
+% %%Both approaches make different approximations and have disadvantages.
+% %%The distribution of branch lengths in coalescent genealogies is not the same as that of the birth-death process, but the distributions converge rapidly with increasing population and sample size. 
+% %Partially-sampled birth-death models do not make the approximations that coalescent models do, but they depend on a model of the sampling process, and simple sampling models may not always be an adequate description of real data sets. 
+
+% In birth-death models, it is assumed that the first individual appears at some time $t_0$ before the present. 
+% Through time, each individual gives rise to one additional offspring with rate $\lambda$ and dies with rate $\mu$. 
+% An individual is sampled (e.g. the pathogen of an infected individual is sequenced, or ancient DNA for an individual is sequenced; or a fossil is observed) with rate $\psi$. 
+% Upon sampling, we assume that the individual representing the sample is removed from the population with probability $r$. 
+% In the case of infectious diseases, $r$ is the probability of being cured or treated, such that the individual is not infectious any more upon sampling. 
+% In the case of species, we typically assume $r=0$ as the species continues to exist upon sampling of a fossil. 
+% At the present (or most recent) time, each extant individual is sampled with probability $\rho$. 
+% % Louis: Just saying "At present time, each extant..." makes it sounds like this is the current state of the method, not as if you're referring to the time of samples in the tree.
+% The probability of a tree, given parameters $t_0,\lambda,\mu,\psi,r, \rho$ has been derived in \citep{StadlerJTB2010} for $r=0$, and generalized for $r \in [0,1]$ in \citep{StadlerEtAl2012MBE-R0}. 
+% A value $r<1$ necessitates using an MCMC algorithm capable of producing trees with sampled ancestors.
+% Such an algorithm is provided in BEAST via the \texttt{SA} (sampled ancestor) package \citep{gavryushkina2014bayesian}. 
+
+% This basic model has been extended to account for changes of parameters through time within the \texttt{bdsky} package \citep{stadler2013birth}.
+% In \texttt{bdsky}, time is divided up into one or more intervals, inside of which parameters are held constant but between which parameters may be completely different (i.e. the change of parameters occurs in a non-parametric way).
+
+\noindent
+\textcolor{blue}{
+In epidemiological investigations the birth-death model can be reparameterised by setting the rate of becoming noninfectious, $\delta = \mu + \psi r$ (the total rate at which lineages are removed), the effective reproductive number, $R_e = \lambda / \delta$, and the sampling proportion $p = \psi / \delta$ (the proportion of removed lineages that are sampled). 
+Figure~\ref{fig:ebov_bdsky} shows the posterior estimates from a bdsky analysis of the 2013--2016 West African Ebola epidemic. Estimates are based on the coding regions of 811 sequences sampled through October 24, 2015, representing more than 2.5\% of known cases. 
+There is evidence that hospital-based transmission and unsafe burials contributed infections to the epidemic \citep{Whitty2014Nature}, thus the sampled ancestor package was used to account for some percentage of patients continuing to transmit the virus after being sampled (by allowing $r$ to be less than 1). 
+$R_e$ was allowed to change over 20 time intervals, equally-spaced between the origin of the epidemic ($t_0$) and the time of the most recent sample, while the the sampling proportion was estimated for every month from March 2014 onwards (when an Ebola virus disease outbreak was declared and the first samples collected). 
+The estimated origin time of the epidemic coincides with the onset of symptoms in the suspected index case on December 26, 2013 \citep{WHO2016NEJM}.
+Estimates of $R_e$ are consistent with WHO estimates \citep{WHO2015NEJM}, based on surveillance data alone, but with greater uncertainty. 
+For the majority of the period between mid-May and October 2014 $R_e$ is estimated to be above 1, consistent with the observation that September 2014 was the turning point of the epidemic and that case incidence stopped growing in October \citep{WHO2015NEJM}. 
+After peak incidence was reached during the last week of September 2014, $R_e$ estimates drop below 1 during October and November 2014 and then fluctuates around 1 during 2015 as transmissions persisted in some areas, due to a combination of unwillingness to seek medical care, unsafe burials and imperfect quarantine measures \citep{WHO2016NEJM}. % as transmission chains continued to emerge. 
+$R_e$ estimates before May 2014 and after August 2015 have a large amount of uncertainty attached to them, due to the small amount of sequences sampled during these time periods.
+Trends in sampling proportion estimates follow empirical estimates based on the number of confirmed cases, however the sampling proportion is overestimated during the period of intense transmission, which suggests the existence of transmission chains not represented in the sequence dataset. 
+In the final two months of the study period the sampling proportion is underestimated, which may indicate ongoing cryptic transmission during this period, but may also be indicative of a model bias resulting from the remaining transmission chains at this time being highly isolated from each other, which is not taken into account by the model. 
+}
+
+% Popular models in epidemiology, such as the SIR model \citep{kermackMcKendrick1927}, or in macroevolution, such as the diversity-dependent model \citep{nee1992tempo}, assume that parameters change as a function of the number of susceptible individuals or non-occupied niches, for example. Thus, they are called parametric birth-death models.
+% Such parametric rate changes can be assumed when using the \texttt{EpiInf} package \citep{vaughan2017directly}.
+% This latter package additionally samples the trajectory of infectious and susceptible individuals through time and allows for the inclusion of case count data in addition to sequences.
+% In a faster, but approximate way, the \texttt{phylodynamics} package \citep{kuhnert2014simultaneous} performs inference under the SIR model using genetic sequences.
+
+
+
+
+
+
+% Although not done here, it is possible to account for the incubation time of an epidemic using the structured models discussed in the next section.
+
+
+\clearpage
+
+\section{Substitution models}
+
+
+\begin{figure}[!h]
+\centering
+	\includegraphics[width=\textwidth]{figures/{EBOV-SUBBIG.BDSKYSA.BMT.relaxedclock.R20.SM.bModelAnalyser}.png}
+	\caption{Posterior distribution of substitution models from an analysis of the 2013--2016 West African Ebola virus epidemic. Each circle represents a substitution model indicated by a six digit number corresponding to the six rates of reversible substitution models. In alphabetical order, these are
+A$\to$C, A$\to$G, A$\to$T, C$\to$G, C$\to$T, and G$\to$T, which can be shared in groups.
+The six digit numbers indicate these groupings, for example 121121 indicates the HKY model, which has shared rates for transitions and shared rates for transversions. 
+Here, only models are considered that are reversible and do not share transition and transversion rates (with the exception of the Jukes Cantor model).
+Other substitution model sets are available.
+Links between substitution models indicate possible jumps during the MCMC chain from simpler (tail of arrow) to more complex (head of arrow) models and back.
+There is no single preferred substitution model for this dataset, as the posterior probably is spread over a number of alternative substitution models.
+Blue circles indicate the 13 models contained in the 95\% credible set, red are outside, and models without circles have neglegible support. 
+In addition, the analysis indicated 100\% posterior probability for gamma-distributed rate heterogeneity across sites and unequal base frequencies.}
+	\label{fig:ebov_bmt}	
+\end{figure}
+
+\clearpage
+
+\emph{Insert into substitution models section if it is included}
+
+\textcolor{blue}{
+Figure~\ref{fig:ebov_bmt} shows the posterior distribution resulting from a bModelTest analysis of substitution models for 14,517 nucleotides from the coding regions of 811 EBOV sequences sampled during the 2013--2016 West African Ebola virus epidemic. 
+Each circle represents a substitution model indicated by a six digit number corresponding to the six rates of reversible substitution models (see Figure~\ref{fig:ebov_bmt} caption for more details). 
+}
+
+
+
+
+

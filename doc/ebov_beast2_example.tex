@@ -1,0 +1,92 @@
+\documentclass[10pt]{article}
+
+\usepackage[a4paper, total={6.5in, 8in}]{geometry}
+\usepackage{amssymb, amsmath, amsthm, graphicx, setspace, ctable, enumerate, appendix, ccaption, lineno, subcaption}
+\usepackage[utf8]{inputenc}
+
+\PassOptionsToPackage{%
+    %backend=biber, %instead of bibtex
+	backend=bibtex8,bibencoding=ascii,%
+	language=auto,%
+	%style=numeric-comp,%
+    style=authoryear-comp, % Author 1999, 2010
+    bibstyle=authoryear,dashed=false, % dashed: substitute rep. author with ---
+    sorting=nyt, % name, year, title
+    maxbibnames=10, % default: 3, et al.
+    %backref=true,%
+    natbib=true % natbib compatibility mode (\citep and \citet still work)
+}{biblatex}
+\usepackage{biblatex}
+
+\newcommand{\thead}[1]{\textsc{#1}}
+\newcommand{\theadr}[1]{\textsc{#1}}
+\newcommand{\theadl}[1]{\textsc{#1}}
+\newcommand{\ie}{i.\,e. }
+\newcommand{\Ie}{I.\,e. }
+\newcommand{\eg}{e.\,g. }
+\newcommand{\Eg}{E.\,g. }
+\newcommand{\super}[1]{\textsuperscript{#1}}
+%\newcommand{\super}[1]{\tiny #1}
+
+
+\addbibresource{beast2.bib}
+%\addbibresource{Ebola.bib}
+%\addbibresource{IDD.bib}
+
+\doublespacing
+\linenumbers
+
+\begin{document}
+
+	\thispagestyle{plain}
+	\title{EBOV analysis example for BEAST 2.5}  
+	\author{Louis du Plessis}
+	\date{\today}
+	\maketitle
+
+	
+	%\clearpage
+	\begin{abstract}
+		Phylodynamics example for BEAST 2.5 paper using data from the West African Ebola dataset. The example uses a sampled-ancestor birth-death skyline to infer population dynamics. This can also double as a bModelTest example.
+
+		\noindent
+		New parts added:
+		\begin{itemize}
+			\item Figure 1
+			\item Blue text in unstructured tree models section
+			\item Figure 2
+			\item Blue text in substitution models section
+			\item Supplement
+		\end{itemize}
+	\end{abstract}
+
+	\tableofcontents
+
+	\clearpage
+	\input{ebov_bdskysa}
+
+	\clearpage
+	\appendix
+	\renewcommand{\thefigure}{S\arabic{figure}}
+	\renewcommand{\thetable}{S\arabic{table}}	
+	\setcounter{page}{1}
+	\setcounter{figure}{0}
+	\input{ebov_bdskysa_suppl}
+
+	\clearpage
+	\printbibliography
+
+
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
