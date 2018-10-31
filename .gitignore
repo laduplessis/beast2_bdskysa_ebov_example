@@ -1,0 +1,11 @@
+.DS_Store
+scripts/__pychache__/
+.Rhistory
+*.log
+*.state
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*-blx.bib
