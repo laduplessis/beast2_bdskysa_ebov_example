@@ -3,10 +3,9 @@
 Please contact Louis du Plessis (louis.duplessis@zoo.ox.ac.uk) for any questions.
 
 ## Summary
+Phylodynamics example for BEAST 2.5 paper using data from the West African Ebola dataset. The example uses a sampled-ancestor birth-death skyline to infer population dynamics. This can also double as a bModelTest example.
 
-
-## Documentation
-Full documentation is inside the `doc/` directory.
+Full [documentation](doc/ebov_beast2_example.pdf) is inside the `doc/` directory.
 
 ## Reproducing results
 Follow the workflows in `workflows/`
