@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<beast beautitemplate='Standard' beautistatus='' required="BEAST v2.5.0:BDSKY v1.4.0:SA v2.0.0" version="2.5"
+	   namespace="beast.core
+	   			 :beast.evolution.alignment
+                 :beast.evolution.tree
+                 :beast.evolution.tree.coalescent
+	   			 :beast.core.util
+                 :beast.core.parameter
+	   			 :beast.evolution.nuc
+	   			 :beast.evolution.operators
+	   			 :beast.evolution.sitemodel
+	   			 :beast.evolution.substitutionmodel
+	   			 :beast.evolution.likelihood
+                 :skylinetools.util">
+    
+<map name="Uniform" >beast.math.distributions.Uniform</map>
+<map name="Exponential" >beast.math.distributions.Exponential</map>
+<map name="LogNormal" >beast.math.distributions.LogNormalDistributionModel</map>
+<map name="Normal" >beast.math.distributions.Normal</map>
+<map name="Beta" >beast.math.distributions.Beta</map>
+<map name="Gamma" >beast.math.distributions.Gamma</map>
+<map name="LaplaceDistribution" >beast.math.distributions.LaplaceDistribution</map>
+<map name="prior" >beast.math.distributions.Prior</map>
+<map name="InverseGamma" >beast.math.distributions.InverseGamma</map>
+<map name="OneOnX" >beast.math.distributions.OneOnX</map>
+
+<!-- Noncoding region -->
+<data id="ig" name="alignment">
+{$alignment_ig}
+</data>
+
+
+<!-- Coding region -->
+<data id="cds">
+{$alignment_cds}
+</data>
+
+<function spec="beast.core.util.Slice" id="samplingProportionSlice" arg="@samplingProportion.t:tree" index="1" count="{$samplingSliceDim}"/>
+
+<run id="mcmc" spec="MCMC" chainLength="{$chainlength}" sampleFromPrior="{$sampleFromPrior}">
+
+    <state id="state" storeEvery="{$statelog}">
+
+        <!-- Tree -->
+        <tree id="Tree.t:tree" name="stateNode">
+            <trait id="dateTrait.t:tree" spec="TraitSet" traitname="date">
+            	{$datetrait}
+                <taxa id="TaxonSet.ig" spec="TaxonSet">
+                    <alignment idref="ig"/>
+                </taxa>
+            </trait>
+            <taxonset idref="TaxonSet.ig"/>
+        </tree>
+
+        <!-- Site model -->
+        <parameter id="gammaShape.s:ig"    name="stateNode" lower="0.0" value="1.0"/>
+		<parameter id="gammaShape.s:cds_1" name="stateNode" lower="0.0" value="1.0"/>
+		<parameter id="gammaShape.s:cds_2" name="stateNode" lower="0.0" value="1.0"/>
+		<parameter id="gammaShape.s:cds_3" name="stateNode" lower="0.0" value="1.0"/>
+
+        <parameter id="kappa.s:ig"    name="stateNode" lower="0.0" value="2.0"/>
+        <parameter id="kappa.s:cds_1" name="stateNode" lower="0.0" value="2.0"/>
+        <parameter id="kappa.s:cds_2" name="stateNode" lower="0.0" value="2.0"/>
+        <parameter id="kappa.s:cds_3" name="stateNode" lower="0.0" value="2.0"/>
+
+        <parameter id="freqParameter.s:ig"    name="stateNode" lower="0.0" upper="1.0" dimension="4" value="0.25"/>
+        <parameter id="freqParameter.s:cds_1" name="stateNode" lower="0.0" upper="1.0" dimension="4" value="0.25"/>
+        <parameter id="freqParameter.s:cds_2" name="stateNode" lower="0.0" upper="1.0" dimension="4" value="0.25"/>
+        <parameter id="freqParameter.s:cds_3" name="stateNode" lower="0.0" upper="1.0" dimension="4" value="0.25"/>
+
+        <parameter id="mutationRate.s:ig"    name="stateNode" value="1.0"/>
+        <parameter id="mutationRate.s:cds_1" name="stateNode" value="1.0"/>
+        <parameter id="mutationRate.s:cds_2" name="stateNode" value="1.0"/>
+        <parameter id="mutationRate.s:cds_3" name="stateNode" value="1.0"/>
+
+        <!-- Clock model -->
+        <parameter id="ucldMean.c:clock"  name="stateNode" lower="0.0" value="1.0"/>
+        <parameter id="ucldStdev.c:clock" name="stateNode" lower="0.0" value="0.1"/>
+        <stateNode id="rateCategories.c:clock" spec="parameter.IntegerParameter" value="1"/>
+
+        <!-- Tree model -->
+        <parameter id="origin.t:tree"                 name="stateNode" lower="{$origin_min}" upper="{$origin_max}" value="{$origin_init}"/>
+        <parameter id="samplingProportion.t:tree"     name="stateNode" lower="0.0" upper="1.0" dimension="{$samplingProportionDimension}" value="{$samplingProportion}"/>
+        <parameter id="reproductiveNumber.t:tree"     name="stateNode" lower="0.0" upper="Infinity" dimension="{$ReDimension}" value="2.0"/> 
+        <parameter id="becomeUninfectiousRate.t:tree" name="stateNode" lower="0.0" upper="Infinity" dimension="1"  value="{$becomeUninfectiousRate}"/>
+        <parameter id="removalProbability.t:tree"     name="stateNode" lower="0.0" upper="1.0"      dimension="1"  value="0.5"/>
+        
+    </state>
+
+
+    <!-- Initial tree -->
+    <init id="RandomTree.t:tree" spec="RandomTree" estimate="false" initial="@Tree.t:tree" taxa="@ig">
+        <populationModel spec="ExponentialGrowth" popSize="0.5" growthRate="2"/>
+    </init>
+
+
+    <distribution id="posterior" spec="util.CompoundDistribution">
+
+    	<!-- Begin Prior -->
+        <distribution id="prior" spec="util.CompoundDistribution">
+
+            {$tipdatesPriors}
+
+            <!-- Treeprior -->
+            <distribution id="BirthDeathSkySerial.t:tree" 
+            			  spec="beast.evolution.speciation.BirthDeathSkylineModel" 
+      					  tree="@Tree.t:tree"
+            			  origin="@origin.t:tree" 
+            			  reproductiveNumber="@reproductiveNumber.t:tree" 
+            			  becomeUninfectiousRate="@becomeUninfectiousRate.t:tree" 
+            			  samplingProportion="@samplingProportion.t:tree"
+                          removalProbability="@removalProbability.t:tree">
+                <birthRateChangeTimes    spec="TreeSlicer" id="ReTreeSlice.t:tree"       dimension="{$ReDimension}" stop="tmrca" includeLast="false" tree="@Tree.t:tree"/>
+                <samplingRateChangeTimes spec="TreeSlicer" id="SamplingTreeSlice.t:tree" dimension="{$samplingProportionDimension}" stop="oldestsample" includeLast="true" tree="@Tree.t:tree"/>
+                <reverseTimeArrays id="reverseTimeArrays" spec="beast.core.parameter.BooleanParameter" value="true false true false false"/>
+            </distribution> 
+                    
+            <!-- Treeprior priors -->
+            <prior id="originPrior.t:tree" name="distribution" x="@origin.t:tree">
+                <Normal name="distr" mean="{$origin_init}" sigma="{$origin_sigma}"/>
+            </prior>
+            <prior id="reproductiveNumberPrior.t:tree" name="distribution" x="@reproductiveNumber.t:tree">
+    			<LogNormal name="distr" M="0" S="1.25" offset="0.0"/>
+            </prior>
+            <prior id="becomeUninfectiousRatePrior.t:tree" name="distribution" x="@becomeUninfectiousRate.t:tree">               
+    			<!--LogNormal name="distr" M="{$becomeUninfectiousRate}" S="0.3" offset="0.0" meanInRealSpace="true"/-->
+                <Gamma name="distr" alpha="19.734" beta="1.36"/>
+            </prior>
+            <prior id="samplingProportionPrior.t:tree" name="distribution" x="@samplingProportionSlice">
+                <Beta name="distr" alpha="{$samplingProportion_alpha}" beta="{$samplingProportion_beta}"/>
+            </prior>
+            <distribution id="removalProbabilityPrior.t:tree" spec="beast.math.distributions.Prior" x="@removalProbability.t:tree">
+                <Beta name="distr" alpha="5.0" beta="2.0"/>                
+            </distribution>
+
+            <!-- Frequency priors and meanrate priors -->
+            <!-- Implicit Uniform priors across range -->
+
+            <!-- Alpha priors (Sitemodel) -->
+            <prior id="GammaShapePrior.s:cds_1" name="distribution" x="@gammaShape.s:cds_1">
+                <Exponential name='distr' mean="1.0" />
+            </prior>
+            <prior id="GammaShapePrior.s:cds_2" name="distribution" x="@gammaShape.s:cds_2">
+                <Exponential name='distr' mean="1.0" />
+            </prior>
+            <prior id="GammaShapePrior.s:cds_3" name="distribution" x="@gammaShape.s:cds_3">
+                <Exponential name='distr' mean="1.0" />
+            </prior>
+            <prior id="GammaShapePrior.s:ig" name="distribution" x="@gammaShape.s:ig">
+                <Exponential name='distr' mean="1.0" />
+            </prior>
+
+            <!-- Kappa priors (Sitemodel) -->
+            <prior id="KappaPrior.s:cds_1" name="distribution" x="@kappa.s:cds_1">                
+                <LogNormal name="distr" M="1.0" S="1.25" offset="0.0" meanInRealSpace="false"/>
+            </prior>
+            <prior id="KappaPrior.s:cds_2" name="distribution" x="@kappa.s:cds_2">
+                <LogNormal name="distr" M="1.0" S="1.25" offset="0.0" meanInRealSpace="false"/>
+            </prior>
+            <prior id="KappaPrior.s:cds_3" name="distribution" x="@kappa.s:cds_3">
+                <LogNormal name="distr" M="1.0" S="1.25" offset="0.0" meanInRealSpace="false"/>
+            </prior>
+            <prior id="KappaPrior.s:ig" name="distribution" x="@kappa.s:ig">
+                <LogNormal name="distr" M="1.0" S="1.25" offset="0.0" meanInRealSpace="false"/>
+            </prior>
+
+            <!-- Clock model priors -->
+            <prior id="MeanRatePrior.c:clock" name="distribution" x="@ucldMean.c:clock">
+                <LogNormal name="distr" M="{$clockRate_mean}" S="{$clockRate_sigma}" offset="0.0" meanInRealSpace="true"/>
+            </prior>
+            <prior id="ucldStdevPrior.c:clock" name="distribution" x="@ucldStdev.c:clock">                
+                <Exponential name="distr" mean="0.33333333333"/>
+            </prior>
+
+        </distribution>
+        <!-- End Prior -->
+
+        <!-- Begin Likelihood -->
+        <distribution id="likelihood" spec="util.CompoundDistribution" useThreads="true">
+
+        	<!-- treeLikelihood noncoding -->
+            <distribution id="treeLikelihood.ig" spec="ThreadedTreeLikelihood" data="@ig" tree="@Tree.t:tree">
+
+                <siteModel id="SiteModel.s:ig" spec="SiteModel" gammaCategoryCount="4" mutationRate="@mutationRate.s:ig" shape="@gammaShape.s:ig">
+                    <parameter id="proportionInvariant.s:ig" estimate="false" lower="0.0" name="proportionInvariant" upper="1.0">0.0</parameter>
+                    <substModel id="hky.s:ig" spec="HKY" kappa="@kappa.s:ig">
+                        <frequencies id="estimatedFreqs.s:ig" spec="Frequencies" frequencies="@freqParameter.s:ig"/>
+                    </substModel>
+                </siteModel>
+
+                <!-- The uncorrelated lognormal relaxed clock -->
+                <branchRateModel id="RelaxedClock.c:clock" 
+                				 spec="beast.evolution.branchratemodel.UCRelaxedClockModel" 
+                				 clock.rate="@ucldMean.c:clock" 
+                				 rateCategories="@rateCategories.c:clock" 
+                				 tree="@Tree.t:tree">
+                    <LogNormal id="LogNormalDistributionModel.c:clock" M="1.0" S="@ucldStdev.c:clock" meanInRealSpace="true" name="distr"/>
+                </branchRateModel>
+
+            </distribution>
+
+            <!-- treeLikelihood 1st codon position -->
+            <distribution id="treeLikelihood.cds_1" spec="ThreadedTreeLikelihood" branchRateModel="@RelaxedClock.c:clock" tree="@Tree.t:tree">                
+                <data id="cds_1" spec="FilteredAlignment" data="@cds" filter="1::3"/>
+
+                <siteModel id="SiteModel.s:cds_1" spec="SiteModel" gammaCategoryCount="4" mutationRate="@mutationRate.s:cds_1" shape="@gammaShape.s:cds_1">
+                    <parameter id="proportionInvariant.s:cds_1" estimate="false" lower="0.0" name="proportionInvariant" upper="1.0">0.0</parameter>
+                    <substModel id="hky.s:cds_1" spec="HKY" kappa="@kappa.s:cds_1">
+                        <frequencies id="estimatedFreqs.s:cds_1" spec="Frequencies" frequencies="@freqParameter.s:cds_1"/>
+                    </substModel>
+                </siteModel>
+            </distribution>
+
+            <!-- treeLikelihood 2nd codon position -->
+            <distribution id="treeLikelihood.cds_2" spec="ThreadedTreeLikelihood" branchRateModel="@RelaxedClock.c:clock" tree="@Tree.t:tree">
+                <data id="cds_2" spec="FilteredAlignment" data="@cds" filter="2::3"/>
+
+                <siteModel id="SiteModel.s:cds_2" spec="SiteModel" gammaCategoryCount="4" mutationRate="@mutationRate.s:cds_2" shape="@gammaShape.s:cds_2">
+                    <parameter id="proportionInvariant.s:cds_2" estimate="false" lower="0.0" name="proportionInvariant" upper="1.0">0.0</parameter>
+                    <substModel id="hky.s:cds_2" spec="HKY" kappa="@kappa.s:cds_2">
+                        <frequencies id="estimatedFreqs.s:cds_2" spec="Frequencies" frequencies="@freqParameter.s:cds_2"/>
+                    </substModel>
+                </siteModel>
+            </distribution>
+
+            <!-- treeLikelihood 3rd codon position -->
+            <distribution id="treeLikelihood.cds_3" spec="ThreadedTreeLikelihood" branchRateModel="@RelaxedClock.c:clock" tree="@Tree.t:tree">
+                <data id="cds_3" spec="FilteredAlignment" data="@cds" filter="3::3"/>
+
+                <siteModel id="SiteModel.s:cds_3" spec="SiteModel" gammaCategoryCount="4" mutationRate="@mutationRate.s:cds_3" shape="@gammaShape.s:cds_3">
+                    <parameter id="proportionInvariant.s:cds_3" estimate="false" lower="0.0" name="proportionInvariant" upper="1.0">0.0</parameter>
+                    <substModel id="hky.s:cds_3" spec="HKY" kappa="@kappa.s:cds_3">
+                        <frequencies id="estimatedFreqs.s:cds_3" spec="Frequencies" frequencies="@freqParameter.s:cds_3"/>
+                    </substModel>
+                </siteModel>
+            </distribution>
+       
+        </distribution>
+        <!-- End Likelihood -->
+
+    </distribution>
+
+
+    <!-- Begin operators -->
+
+    	<!-- Sitemodel operators-->
+	    <operator id="gammaShapeScaler.s:ig"    spec="ScaleOperator" parameter="@gammaShape.s:ig"    scaleFactor="0.5" weight="0.1"/>
+	    <operator id="gammaShapeScaler.s:cds_1" spec="ScaleOperator" parameter="@gammaShape.s:cds_1" scaleFactor="0.5" weight="0.1"/>
+	    <operator id="gammaShapeScaler.s:cds_2" spec="ScaleOperator" parameter="@gammaShape.s:cds_2" scaleFactor="0.5" weight="0.1"/>
+  	    <operator id="gammaShapeScaler.s:cds_3" spec="ScaleOperator" parameter="@gammaShape.s:cds_3" scaleFactor="0.5" weight="0.1"/>
+
+	    <operator id="KappaScaler.s:ig"    spec="ScaleOperator" parameter="@kappa.s:ig"    scaleFactor="0.5" weight="0.1"/>
+	    <operator id="KappaScaler.s:cds_1" spec="ScaleOperator" parameter="@kappa.s:cds_1" scaleFactor="0.5" weight="0.1"/>
+	    <operator id="KappaScaler.s:cds_2" spec="ScaleOperator" parameter="@kappa.s:cds_2" scaleFactor="0.5" weight="0.1"/>
+	    <operator id="KappaScaler.s:cds_3" spec="ScaleOperator" parameter="@kappa.s:cds_3" scaleFactor="0.5" weight="0.1"/>
+
+	   	<operator id="FrequenciesExchanger.s:ig"    spec="DeltaExchangeOperator" delta="0.01" weight="0.1" parameter="@freqParameter.s:ig"/>
+ 	   	<operator id="FrequenciesExchanger.s:cds_1" spec="DeltaExchangeOperator" delta="0.01" weight="0.1" parameter="@freqParameter.s:cds_1"/>
+		<operator id="FrequenciesExchanger.s:cds_2" spec="DeltaExchangeOperator" delta="0.01" weight="0.1" parameter="@freqParameter.s:cds_2"/>
+		<operator id="FrequenciesExchanger.s:cds_3" spec="DeltaExchangeOperator" delta="0.01" weight="0.1" parameter="@freqParameter.s:cds_3"/>
+
+	    <operator id="FixMeanMutationRatesOperator" spec="DeltaExchangeOperator" delta="0.75" weight="2.0">
+	        <parameter idref="mutationRate.s:ig"/>
+	        <parameter idref="mutationRate.s:cds_1"/>
+	        <parameter idref="mutationRate.s:cds_2"/>
+	        <parameter idref="mutationRate.s:cds_3"/>
+	        <weightvector id="weightparameter" spec="parameter.IntegerParameter" dimension="4" estimate="false" lower="0" upper="0">4439 4839 4839 4839</weightvector>
+	    </operator>
+
+
+	    <!-- Clock model operators -->
+	    <operator id="ucldMeanScaler.c:clock" spec="ScaleOperator" parameter="@ucldMean.c:clock" scaleFactor="0.5" weight="1.0"/>
+	    <operator id="ucldStdevScaler.c:clock" spec="ScaleOperator" parameter="@ucldStdev.c:clock" scaleFactor="0.5" weight="3.0"/>
+
+	    <operator id="CategoriesRandomWalk.c:clock" spec="IntRandomWalkOperator" parameter="@rateCategories.c:clock" weight="10.0" windowSize="1"/>
+	    <operator id="CategoriesSwapOperator.c:clock" spec="SwapOperator" intparameter="@rateCategories.c:clock" weight="10.0"/>
+	    <operator id="CategoriesUniform.c:clock" spec="UniformOperator" parameter="@rateCategories.c:clock" weight="10.0"/>
+
+	    <operator id="relaxedUpDownOperator.c:clock" spec="UpDownOperator" scaleFactor="0.75" weight="3.0">
+	        <up idref="ucldMean.c:clock"/>
+	        <down idref="Tree.t:tree"/>
+	    </operator>
+
+
+	    <!-- Tree operators -->
+        <operator id="LeafToSA" spec="LeafToSampledAncestorJump" tree="@Tree.t:tree" weight="10.0"/>
+        <operator id="SAWilsonBalding" spec="SAWilsonBalding" tree="@Tree.t:tree" weight="10.0"/>
+        <operator id="SAWide" spec="SAExchange" isNarrow="false" tree="@Tree.t:tree" weight="10.0"/>
+        <operator id="SANarrow" spec="SAExchange" tree="@Tree.t:tree" weight="10.0"/>
+        <operator id="SAUniformOperator" spec="SAUniform" tree="@Tree.t:tree" weight="10.0"/>
+        <operator id="SATreeRootScaler" spec="SAScaleOperator" rootOnly="true" scaleFactor="0.95" tree="@Tree.t:tree" weight="1.0"/>
+        <operator id="SATreeScaler" spec="SAScaleOperator" scaleFactor="0.95" tree="@Tree.t:tree" weight="3.0"/>
+	    
+
+	    <!-- BDSKY operators -->
+        <operator id="origScaler.t:tree" spec="ScaleOperator" parameter="@origin.t:tree" scaleFactor="0.75" weight="1.0"/>
+	    <operator id="becomeUninfectiousRateScaler.t:tree" spec="ScaleOperator" parameter="@becomeUninfectiousRate.t:tree" scaleFactor="0.75" weight="2.0"/>
+	    <operator id="samplingScaler.t:tree" spec="ScaleOperator" parameter="@samplingProportion.t:tree" scaleFactor="0.75" weight="2.0"/>
+	    <operator id="reproductiveNumberScaler.t:tree" spec="ScaleOperator" parameter="@reproductiveNumber.t:tree" scaleFactor="0.75" weight="10.0"/>
+        <operator id='removalProbabilityOperator' spec='ScaleOperator' scaleFactor="0.9" weight="1" parameter="@removalProbability.t:tree"/>
+
+	    <operator id="updownBD.t:tree" spec="UpDownOperator" scaleFactor="0.75" weight="2.0">
+	        <up idref="reproductiveNumber.t:tree"/>
+	        <down idref="becomeUninfectiousRate.t:tree"/>
+	    </operator>
+
+
+	   	<!-- Tipdates operators -->
+        {$tipdatesOperators}
+
+    <!-- End operators -->
+
+
+    <logger id="tracelog" fileName="{$name}_$(seed).log" logEvery="{$tracelog}" model="@posterior" sanitiseHeaders="true" sort="smart">
+        <log idref="posterior"/>
+        <log idref="likelihood"/>
+        <log idref="prior"/>
+
+        <log idref="treeLikelihood.ig"/>
+        <log idref="treeLikelihood.cds_2"/>
+        <log idref="treeLikelihood.cds_3"/>
+        <log idref="treeLikelihood.cds_1"/>
+
+        <log idref="BirthDeathSkySerial.t:tree"/>
+
+        <log idref="gammaShape.s:ig"/>
+        <log idref="gammaShape.s:cds_1"/>
+        <log idref="gammaShape.s:cds_2"/>
+        <log idref="gammaShape.s:cds_3"/>
+
+        <log idref="kappa.s:ig"/>
+        <log idref="kappa.s:cds_1"/>
+        <log idref="kappa.s:cds_2"/>       
+        <log idref="kappa.s:cds_3"/>
+
+		<log idref="freqParameter.s:ig"/>
+        <log idref="freqParameter.s:cds_1"/>
+        <log idref="freqParameter.s:cds_2"/>
+        <log idref="freqParameter.s:cds_3"/>
+
+        <log idref="mutationRate.s:ig"/>
+        <log idref="mutationRate.s:cds_1"/>
+        <log idref="mutationRate.s:cds_2"/>
+        <log idref="mutationRate.s:cds_3"/>
+
+        <log idref="ucldMean.c:clock"/>
+        <log idref="ucldStdev.c:clock"/>
+        <log id="rate.c:clock" spec="beast.evolution.branchratemodel.RateStatistic" branchratemodel="@RelaxedClock.c:clock" tree="@Tree.t:tree"/>
+
+        <log id="TreeHeight.t:tree" spec="TreeHeightLogger" tree="@Tree.t:tree"/>
+        <log idref="origin.t:tree"/>
+        <log id="TreeDate.t:tree" spec="TreeDateLogger" tree="@Tree.t:tree"/>
+        <log id="originDate.t:tree" spec="TreeDateLogger" tree="@Tree.t:tree" parameter="@origin.t:tree"/>
+
+                
+        <log idref="samplingProportion.t:tree"/>
+        <log idref="becomeUninfectiousRate.t:tree"/>
+        <log idref="reproductiveNumber.t:tree"/> 
+        <log idref="removalProbability.t:tree"/>    
+        <log id="SACount" spec="SampledAncestorLogger" tree="@Tree.t:tree"/>
+
+        <log spec="TreeSliceDateLogger" treeSlice="@ReTreeSlice.t:tree"/>
+        <log spec="TreeSliceDateLogger" treeSlice="@SamplingTreeSlice.t:tree"/>           
+        <log idref="SamplingTreeSlice.t:tree"/>           
+    </logger>
+
+    <logger id="screenlog" logEvery="{$screenlog}">
+        <log idref="posterior"/>
+        <log id="ESS.0" spec="util.ESS" arg="@posterior"/>
+        <log idref="likelihood"/>
+        <log idref="prior"/>
+    </logger>
+    
+    <logger id="treelog" fileName="{$name}_$(seed).trees" logEvery="{$treelog}" mode="tree">
+        <log id="TreeWithMetaDataLogger.t:tree" spec="TreeWithMetaDataLogger" branchratemodel="@RelaxedClock.c:clock" tree="@Tree.t:tree"/>
+    </logger>
+
+</run>
+
+</beast>
