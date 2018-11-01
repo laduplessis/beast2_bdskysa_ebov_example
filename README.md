@@ -7,16 +7,16 @@ Please contact Louis du Plessis (louis.duplessis@zoo.ox.ac.uk) for any questions
 ## Summary
 Phylodynamics example for BEAST 2.5 paper using data from the West African Ebola dataset. The example uses a sampled-ancestor birth-death skyline to infer population dynamics. This can also double as a bModelTest example.
 
-Full [documentation](doc/ebov_beast2_example.pdf) is inside the `doc/` directory.
+Full [documentation](doc/ebov_beast2_example.pdf) is inside the [`doc/`](doc/) directory.
 
 ## Reproducing results
-Follow the workflows in `workflows/`
+Follow the workflows in [`workflows/`](workflows/)
 
-1. `data_partition.md`: Extract and process coding and noncoding regions of the full alignment.
-2. `extract_datasdets.rmd`: Extract particular datasets from alignment.
-3. `extract_sampling.rmd`: Extract empirical sampling proportions from datasets.
-4. `beast_runs.md`: Create, run and combine BEAST XMLs.
-5. `plot_figures.md`: Plot output figures.
+1. [`data_partition.md`](workflows/data_partition.md): Extract and process coding and noncoding regions of the full alignment.
+2. [`extract_datasdets.rmd`](workflows/extract_datasdets.rmd): Extract particular datasets from alignment.
+3. [`extract_sampling.rmd`](workflows/extract_sampling.rmd): Extract empirical sampling proportions from datasets.
+4. [`beast_runs.md`](workflows/beast_runs.md): Create, run and combine BEAST XMLs.
+5. [`plot_figures.md`](workflows/plot_figures.md): Plot output figures.
 
 
 ## License
