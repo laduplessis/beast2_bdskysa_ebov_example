@@ -43,13 +43,14 @@ for (dataset in datasets) {
   
   logfile  <- readLogfile(paste0(logpath, filebase,".combined_25_100000.log"))
   plotParDensity(365/logfile$becomeUninfectiousRate, outfile=paste0(outputbase, filebase, ".InfectedPeriod.pdf"),
-                 ylab="Infected period\n(days)", xlab="", yaxt='n', col=pal.dark(cgreen), fill=pal.dark(cgreen,0.5), 
-                 cex.axis=0.7, mgp=c(0.5,0.5,0), xlim=periodlims) 
+                 ylab="Infected period \n(days)", xlab="", yaxt='n', col=pal.dark(cgreen), fill=pal.dark(cgreen,0.5), 
+                 cex.axis=1, cex.lab=1.3, mgp=c(0.5,0.5,0), xlim=periodlims) 
   plotParDensity(logfile$rate.mean, outfile=paste0(outputbase, filebase, ".ClockRate.pdf"),
-                 ylab="Clock rate (s/s/y)", xlab="", yaxt='n', col=pal.dark(cgreen), fill=pal.dark(cgreen,0.5), 
-                 cex.axis=0.7, mgp=c(0.5,0.5,0), xlim=clocklims) 
+                 ylab="Clock rate\n(s/s/y)", xlab="", yaxt='n', col=pal.dark(cgreen), fill=pal.dark(cgreen,0.5), 
+                 cex.axis=1, cex.lab=1.3, mgp=c(0.5,0.5,0), xlim=clocklims) 
   
 }
+
 
 #######################################################################################################################
 # R10.SM

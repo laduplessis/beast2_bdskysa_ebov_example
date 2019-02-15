@@ -1,5 +1,6 @@
 rm(list = ls())
 library(ggtree)
+library(ggplot2)
 library(bdskytools)
 
 
@@ -39,7 +40,7 @@ plotTree <- function(infile, outfile, enddate, daterange) {
   country[which(country == "GIN")] <- "Guinea"
   country[which(country == "LBR")] <- "Liberia"
   country[which(country == "SLE")] <- "Sierra Leone"
-  country[which(country == "NA")]  <- "Unknown"
+  country[which(country == "NA")]  <- "Guinea"  # (this one sequence is mislabelled in Gytis' dataset, the sampling location is definitely known)
   
   metadata <- data.frame(cbind(seqnames, country))
   colnames(metadata) <- c("Label","Country")
@@ -52,17 +53,20 @@ plotTree <- function(infile, outfile, enddate, daterange) {
   yearstarts <- which(format.Date(plotmonths,format="%m") == "01")
   monthlabs[yearstarts] <- format.Date(plotmonths[yearstarts],format="%b\n%Y")
   
+  plotids <- seq(1,length(xticks),by=2)
   
-  # Plot tree
+  # Plot tree 
   p <- ggtree(beasttree,right=TRUE, mrsd=enddate, lwd=0.15)
   p <- p %<+% metadata +
     geom_tippoint(aes(color=Country), size=0.15) + 
-    theme_tree2(legend.position="right", text = element_text(size=5)) + 
-    scale_x_continuous(breaks=xticks, labels=monthlabs) 
-  
+    scale_x_continuous(breaks=xticks[plotids], labels=monthlabs[plotids]) +
+    theme_tree2(legend.position="right", axis.text.x = element_text(size=6, colour='black'), 
+                                         legend.text=element_text(size=8, colour='black'),
+                                         legend.title=element_text(size=8, colour='black'))
   # Save file
   ggsave(filename=outfile, plot = p, width=3.5, height=3.5)
 
+  return(metadata)
 }
 
 
@@ -79,7 +83,7 @@ for (dataset in datasets) {
     filebase <- paste(dataset, model, run, sep=".")
     outfile  <- paste0(outputbase, filebase,".MCC.pdf")
     
-    plotTree(infile =paste0(logpath, filebase, ".combined_25_100000.MCC.tree"), 
+    metadata <- plotTree(infile =paste0(logpath, filebase, ".combined_25_100000.MCC.tree"), 
              outfile=paste0(outputbase, filebase,".MCC.pdf"), 
              enddate=lastdates[[dataset]], 
              daterange=as.Date(c("2014-01-01","2015-12-01")))

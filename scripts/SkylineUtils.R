@@ -171,7 +171,7 @@ plotSkyline <- function(configfile, logfile, samplingfile=NA, outfile, reported=
   # Add histogram of reported cases
   if (!is.null(reported)) {
       plotCaseHist(reported, range(xticks), ylim=c(0,Remax), 
-                   side=4, ylab="Confirmed cases (weekly)", cex.label=1.0, cex.axis=0.7,
+                   side=4, ylab="Confirmed cases (weekly)", cex.label=1.3, cex.axis=1,
                    plotCounts=FALSE, lowCountMark=10)
   }
   
@@ -180,7 +180,7 @@ plotSkyline <- function(configfile, logfile, samplingfile=NA, outfile, reported=
                     col=pal.dark(corange), fill=pal.dark(corange,0.7),
                     xaxis=TRUE, yaxis=TRUE, axispadding=0, ylims=c(0,Remax),
                     ylab=expression("R"[e]), xlab="", xline=2, side=2, yline=2.5,
-                    lwd=1, cex.axis=0.7, cex.label=1.0, xticks=xticks, xticklabels=NA,
+                    lwd=1, cex.axis=1, cex.label=1.3, xticks=xticks, xticklabels=NA,
                     new=FALSE, add=TRUE)
   
   # Line at 1 and box around plot
@@ -191,13 +191,14 @@ plotSkyline <- function(configfile, logfile, samplingfile=NA, outfile, reported=
   if (length(plotMarks) > 0) {
       for (i in 1:length(plotMarks)) {
         abline(v=plotMarks[i], lty=3)
-        text(x=plotMarks[i], y=Remax, LETTERS[i], xpd=TRUE, srt=0, pos=3, cex=1.0)
+        text(x=plotMarks[i], y=Remax, LETTERS[i], xpd=TRUE, srt=0, pos=3, cex=1.5)
       }
   }
     
   # Plot X-axis
-  text(x=xticks[1:(length(xticks)-1)], y=-0.02*Remax, monthlabs[1:(length(monthlabs)-1)], xpd=TRUE, srt=0, pos=1, cex=0.7)
-  text(x=xticks[yearstarts], y=-0.1*Remax, yearlabs, xpd=TRUE, srt=0, pos=1, cex=0.7)
+  plotids <- seq(from=1, to=(length(monthlabs)-1), by=2)
+  text(x=xticks[plotids], y=-0.02*Remax, monthlabs[plotids], xpd=TRUE, srt=0, pos=1, cex=1)
+  text(x=xticks[yearstarts], y=-0.15*Remax, yearlabs, xpd=TRUE, srt=0, pos=1, cex=1.3)
   
   # Add origin/TMRCA
   if (plotMRCA == TRUE) plotTMRCA(lf$TreeHeight, range(Re_gridded$dates), c(0,Remax), col=pal.dark(cpurple, 0.7)) 
@@ -231,15 +232,16 @@ plotSkyline <- function(configfile, logfile, samplingfile=NA, outfile, reported=
                     col=pal.dark(cpurple), fill=pal.dark(cpurple,0.7),
                     xaxis=TRUE, yaxis=TRUE, axispadding=0, ylims=c(0,samplingmax),
                     ylab="Sampling proportion", xlab="", xline=2, side=2, yline=2.5,
-                    lwd=1, cex.axis=0.7, cex.label=1.0, xticks=xticks, xticklabels=NA,
+                    lwd=1, cex.axis=1, cex.label=1.3, xticks=xticks, xticklabels=NA,
                     new=FALSE, add=TRUE)
   
   # Box around plot
   rect(min(xticks), 0, max(xticks), samplingmax, xpd=TRUE)
   
   # Plot X-axis
-  text(x=xticks[1:(length(xticks)-1)], y=-0.02*samplingmax, monthlabs[1:(length(monthlabs)-1)], xpd=TRUE, srt=0, pos=1, cex=0.7)
-  text(x=xticks[yearstarts], y=-0.1*samplingmax, yearlabs, xpd=TRUE, srt=0, pos=1, cex=0.7)
+  plotids <- seq(from=1, to=(length(monthlabs)-1), by=2)
+  text(x=xticks[plotids], y=-0.02*samplingmax, monthlabs[plotids], xpd=TRUE, srt=0, pos=1, cex=1)
+  text(x=xticks[yearstarts], y=-0.15*samplingmax, yearlabs, xpd=TRUE, srt=0, pos=1, cex=1.3)
   
   # Add empirical sampling proportion 
   if (!is.na(samplingfile)) {
